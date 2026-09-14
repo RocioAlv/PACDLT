@@ -291,9 +291,10 @@
   });
 
   // ---------- Carga de datos ----------
-  function cargar() {
+  function cargar(forzarRefresco) {
     document.getElementById('updated').textContent = 'Actualizando…';
-    return fetch(API_URL)
+    const url = forzarRefresco ? (API_URL + '?refrescar=1') : API_URL;
+    return fetch(url)
       .then(res => res.json())
       .then(data => { DATA = data; render(); })
       .catch(err => {
@@ -303,12 +304,12 @@
         });
       });
   }
-  cargar();
+  cargar(false);
 
   document.getElementById('btnRefrescar').addEventListener('click', () => {
     const btn = document.getElementById('btnRefrescar');
     btn.disabled = true; btn.textContent = 'Actualizando…';
-    cargar().finally(() => { btn.disabled = false; btn.textContent = 'Actualizar ahora'; });
+    cargar(true).finally(() => { btn.disabled = false; btn.textContent = 'Actualizar ahora'; });
   });
 
   function render() {
