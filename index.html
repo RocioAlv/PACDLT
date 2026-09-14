@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PAC Capacitaciones 2026</title>
+<style>
+  :root {
+    --grad-a: #fbd3e9;
+    --grad-b: #bbd2f0;
+    --grad-c: #eec0c6;
+    --ink: #2b2d42;
+    --ink-soft: #6b7280;
+    --glass-bg: rgba(255,255,255,0.55);
+    --glass-border: rgba(255,255,255,0.6);
+    --accent: #6c8cff;
+    --good: #4caf82;
+    --warn: #e0955c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(135deg, var(--grad-a), var(--grad-b) 60%, var(--grad-c));
+    min-height: 100vh;
+    padding: 24px;
+  }
+  header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
+  }
+  h1 { font-size: 22px; margin: 0; }
+  .subtitle { color: var(--ink-soft); font-size: 13px; margin-top: 4px; }
+
+  .glass {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.12);
+  }
+
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px; margin-bottom: 20px;
+  }
+  .kpi { padding: 16px 18px; }
+  .kpi .value { font-size: 26px; font-weight: 700; }
+  .kpi .label { font-size: 11px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .04em; }
+
+  nav.tabs { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+  nav.tabs button {
+    padding: 9px 16px; border-radius: 12px; border: 1px solid var(--glass-border);
+    background: rgba(255,255,255,0.4); font-size: 13px; cursor: pointer; color: var(--ink);
+  }
+  nav.tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .tabpanel { display: none; }
+  .tabpanel.active { display: block; }
+
+  .filters { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  select, input[type=text] {
+    padding: 8px 14px; border-radius: 12px; border: 1px solid var(--glass-border);
+    background: rgba(255,255,255,0.7); font-size: 13px; outline: none;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 9px 12px; }
+  thead th { color: var(--ink-soft); font-weight: 600; font-size: 11px; text-transform: uppercase; }
+  tbody tr { border-top: 1px solid rgba(255,255,255,0.5); cursor: default; }
+  tbody tr:hover { background: rgba(255,255,255,0.35); }
+
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 999px;
+    font-size: 11px; font-weight: 600; background: rgba(108,140,255,0.15); color: var(--accent);
+  }
+  .badge.good { background: rgba(76,175,130,0.15); color: var(--good); }
+  .badge.warn { background: rgba(224,149,92,0.18); color: var(--warn); }
+
+  .bar-bg { background: rgba(255,255,255,0.6); border-radius: 999px; height: 6px; overflow: hidden; width: 100px; display: inline-block; vertical-align: middle; }
+  .bar-fill { background: var(--accent); height: 100%; }
+
+  .panel { padding: 20px; margin-bottom: 20px; }
+  .panel h2 { font-size: 15px; margin: 0 0 14px 0; }
+  .loading { text-align: center; padding: 50px 0; color: var(--ink-soft); }
+
+  .pendientes-list { font-size: 12px; color: var(--ink-soft); max-width: 340px; }
+  .stack-bar { display: flex; width: 140px; height: 10px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,0.6); }
+  .stack-bar .c { background: var(--good); }
+  .stack-bar .p { background: var(--warn); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>PAC Capacitaciones 2026</h1>
+    <div class="subtitle" id="updated">Conectando con la planilla…</div>
+  </div>
+</header>
+
+<div class="kpis" id="kpis">
+  <div class="glass kpi"><div class="value">—</div><div class="label">Capacitaciones</div></div>
+  <div class="glass kpi"><div class="value">—</div><div class="label">Completas</div></div>
+  <div class="glass kpi"><div class="value">—</div><div class="label">Pendientes</div></div>
+  <div class="glass kpi"><div class="value">—</div><div class="label">Personas</div></div>
+  <div class="glass kpi"><div class="value">—</div><div class="label">% Asistencia prom.</div></div>
+  <div class="glass kpi"><div class="value">—</div><div class="label">Dotación total</div></div>
+</div>
+
+<nav class="tabs">
+  <button data-tab="resumen" class="active">Resumen</button>
+  <button data-tab="capacitaciones">Capacitaciones</button>
+  <button data-tab="personas">Personas</button>
+  <button data-tab="gantt">Gantt</button>
+  <button data-tab="log">Log detallado</button>
+  <button data-tab="dotacion">Dotación</button>
+</nav>
+
+<div id="resumen" class="tabpanel active">
+  <div class="glass panel">
+    <h2>Resumen por área / pilar</h2>
+    <div id="resumenWrap" class="loading">Cargando…</div>
+  </div>
+</div>
+
+<div id="capacitaciones" class="tabpanel">
+  <div class="glass panel">
+    <h2>Capacitaciones — BASE CAPACITACIONES</h2>
+    <div class="filters">
+      <input type="text" id="buscarCap" placeholder="Buscar capacitación o persona…">
+      <select id="filtroArea"><option value="">Todas las áreas</option></select>
+    </div>
+    <div id="tablaWrap" class="loading">Cargando…</div>
+  </div>
+</div>
+
+<div id="personas" class="tabpanel">
+  <div class="glass panel">
+    <h2>Estado por persona</h2>
+    <div class="filters">
+      <input type="text" id="buscarPersona" placeholder="Buscar persona…">
+    </div>
+    <div id="personasWrap" class="loading">Cargando…</div>
+  </div>
+</div>
+
+<div id="gantt" class="tabpanel">
+  <div class="glass panel">
+    <h2>Gantt 2026</h2>
+    <div id="ganttWrap" class="loading">Cargando…</div>
+  </div>
+</div>
+
+<div id="log" class="tabpanel">
+  <div class="glass panel">
+    <h2>Log detallado — TOTAL CAPACITACIONES RELIZADAS</h2>
+    <div class="filters">
+      <input type="text" id="buscarLog" placeholder="Buscar por apellido, nombre, pilar…">
+    </div>
+    <div id="logWrap" class="loading">Cargando…</div>
+  </div>
+</div>
+
+<div id="dotacion" class="tabpanel">
+  <div class="glass panel">
+    <h2>Dotación por área</h2>
+    <div id="dotacionWrap" class="loading">Cargando…</div>
+  </div>
+</div>
+
+<script>
+  // ⚠️ Pegá acá la URL /exec de tu Web App de Apps Script (Deploy > Manage deployments)
+  const API_URL = 'https://script.google.com/macros/s/AKfycbwjHtjy5S57vRcMhqXEpqveZaOStFRJSdRd4i8ufx9xrH2iA8YoyAQcINXgP6y7Ipmx/exec';
+
+  let DATA = null;
+
+  function fmtPct(v) {
+    if (v === null || v === undefined || isNaN(v)) return '—';
+    const n = Number(v);
+    const pct = n <= 1 ? n * 100 : n;
+    return Math.round(pct) + '%';
+  }
+
+  // ---------- Tabs ----------
+  document.querySelectorAll('nav.tabs button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tabpanel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ---------- Carga de datos ----------
+  fetch(API_URL)
+    .then(res => res.json())
+    .then(data => { DATA = data; render(); })
+    .catch(err => {
+      document.getElementById('updated').textContent = 'Error conectando con la API: ' + err.message;
+      ['tablaWrap','personasWrap','ganttWrap','logWrap','dotacionWrap','resumenWrap'].forEach(id => {
+        document.getElementById(id).innerHTML = '<div class="loading">No se pudo cargar. Revisá API_URL y el deploy de Apps Script.</div>';
+      });
+    });
+
+  function render() {
+    if (!DATA) return;
+    const k = DATA.kpis;
+    const kpiEls = document.querySelectorAll('.kpi .value');
+    kpiEls[0].textContent = k.totalCapacitaciones;
+    kpiEls[1].textContent = k.completas;
+    kpiEls[2].textContent = k.pendientes;
+    kpiEls[3].textContent = k.totalPersonas;
+    kpiEls[4].textContent = fmtPct(k.promedioAsistencia);
+    kpiEls[5].textContent = k.totalDotacion;
+
+    document.getElementById('updated').textContent =
+      'Actualizado ' + new Date(DATA.actualizado).toLocaleString('es-AR');
+
+    const filtroArea = document.getElementById('filtroArea');
+    if (filtroArea.options.length <= 1) {
+      DATA.resumenAreas.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r.area; opt.textContent = r.area + ' (' + r.total + ')';
+        filtroArea.appendChild(opt);
+      });
+    }
+
+    renderResumen();
+    renderTabla();
+    renderPersonas();
+    renderGantt();
+    renderLog();
+    renderDotacion();
+  }
+
+  // ---------- Resumen por área ----------
+  function renderResumen() {
+    let html = '<table><thead><tr>' +
+      '<th>Área / Pilar</th><th>Total</th><th>Completas</th><th>Pendientes</th><th>Progreso</th>' +
+      '</tr></thead><tbody>';
+    DATA.resumenAreas.forEach(r => {
+      const pctCompletas = r.total ? Math.round((r.completas / r.total) * 100) : 0;
+      html += '<tr>' +
+        '<td>' + r.area + '</td>' +
+        '<td>' + r.total + '</td>' +
+        '<td><span class="badge good">' + r.completas + '</span></td>' +
+        '<td><span class="badge warn">' + r.pendientes + '</span></td>' +
+        '<td><div class="stack-bar"><div class="c" style="width:' + pctCompletas + '%"></div><div class="p" style="width:' + (100 - pctCompletas) + '%"></div></div></td>' +
+        '</tr>';
+    });
+    html += '</tbody></table>';
+    if (!DATA.resumenAreas.length) html = '<div class="loading">Sin datos.</div>';
+    document.getElementById('resumenWrap').innerHTML = html;
+  }
+
+  // ---------- Capacitaciones (matriz) ----------
+  function renderTabla() {
+    const filtroTexto = document.getElementById('buscarCap').value.toLowerCase();
+    const filtroArea = document.getElementById('filtroArea').value;
+
+    const filas = DATA.capacitaciones.filter(c => {
+      const matchArea = !filtroArea || c.area === filtroArea;
+      const matchTexto = !filtroTexto ||
+        (c.capacitacion || '').toLowerCase().includes(filtroTexto) ||
+        c.asistentes.some(a => a.toLowerCase().includes(filtroTexto));
+      return matchArea && matchTexto;
+    });
+
+    let html = '<table><thead><tr>' +
+      '<th>Capacitación</th><th>Área</th><th>Asistentes</th><th>% Asistencia</th>' +
+      '</tr></thead><tbody>';
+
+    filas.forEach(c => {
+      const pct = c.porcentajeAsistencia !== null ? fmtPct(c.porcentajeAsistencia) : fmtPct(c.totalAsistentes / (DATA.personas.length || 1));
+      html += '<tr>' +
+        '<td>' + c.capacitacion + '</td>' +
+        '<td><span class="badge">' + (c.area || '—') + '</span></td>' +
+        '<td>' + c.totalAsistentes + ' / ' + DATA.personas.length + '</td>' +
+        '<td>' + pct + '</td>' +
+        '</tr>';
+    });
+    html += '</tbody></table>';
+    if (!filas.length) html = '<div class="loading">Sin resultados para este filtro.</div>';
+    document.getElementById('tablaWrap').innerHTML = html;
+  }
+
+  // ---------- Personas ----------
+  function renderPersonas() {
+    const filtroTexto = document.getElementById('buscarPersona').value.toLowerCase();
+    const filas = DATA.personasStatus.filter(p => !filtroTexto || p.persona.toLowerCase().includes(filtroTexto));
+
+    let html = '<table><thead><tr>' +
+      '<th>Persona</th><th>Hechas</th><th>Pendientes</th><th>% Asistencia</th><th>Capacitaciones pendientes</th>' +
+      '</tr></thead><tbody>';
+
+    filas.forEach(p => {
+      const pct = Math.round(p.porcentaje * 100);
+      html += '<tr>' +
+        '<td>' + p.persona + '</td>' +
+        '<td>' + p.hechas + ' / ' + p.total + '</td>' +
+        '<td><span class="badge ' + (p.pendientes ? 'warn' : 'good') + '">' + p.pendientes + '</span></td>' +
+        '<td><div class="bar-bg"><div class="bar-fill" style="width:' + pct + '%"></div></div> ' + pct + '%</td>' +
+        '<td class="pendientes-list">' + (p.pendientesNombres.join(', ') || '—') + '</td>' +
+        '</tr>';
+    });
+    html += '</tbody></table>';
+    if (!filas.length) html = '<div class="loading">Sin resultados.</div>';
+    document.getElementById('personasWrap').innerHTML = html;
+  }
+
+  // ---------- Gantt ----------
+  function renderGantt() {
+    let html = '<table><thead><tr>' +
+      '<th>Capacitación</th><th>Instructor</th><th>Pilar</th><th>Duración</th><th>Programada para</th>' +
+      '</tr></thead><tbody>';
+    DATA.gantt.forEach(g => {
+      html += '<tr>' +
+        '<td>' + g.capacitacion + '</td>' +
+        '<td>' + (g.instructor || '—') + '</td>' +
+        '<td><span class="badge">' + (g.pilar || '—') + '</span></td>' +
+        '<td>' + (g.duracion || '—') + '</td>' +
+        '<td>' + (g.programadaPara.join(', ') || '—') + '</td>' +
+        '</tr>';
+    });
+    html += '</tbody></table>';
+    if (!DATA.gantt.length) html = '<div class="loading">Sin datos de Gantt.</div>';
+    document.getElementById('ganttWrap').innerHTML = html;
+  }
+
+  // ---------- Log detallado ----------
+  function renderLog() {
+    const filtroTexto = document.getElementById('buscarLog').value.toLowerCase();
+    const filas = DATA.log.filter(r => {
+      if (!filtroTexto) return true;
+      return (r.apellido + ' ' + r.nombre + ' ' + r.pilar + ' ' + r.tipo)
+        .toLowerCase().includes(filtroTexto);
+    });
+
+    let html = '<table><thead><tr>' +
+      '<th>Apellido</th><th>Nombre</th><th>Área</th><th>Puesto</th><th>Pilar</th><th>Tipo de capacitación</th><th>Reprogramación</th>' +
+      '</tr></thead><tbody>';
+    filas.slice(0, 500).forEach(r => {
+      html += '<tr>' +
+        '<td>' + r.apellido + '</td>' +
+        '<td>' + r.nombre + '</td>' +
+        '<td>' + r.area + '</td>' +
+        '<td>' + r.puesto + '</td>' +
+        '<td><span class="badge">' + (r.pilar || '—') + '</span></td>' +
+        '<td>' + r.tipo + '</td>' +
+        '<td>' + (r.reprogramacion || '—') + '</td>' +
+        '</tr>';
+    });
+    html += '</tbody></table>';
+    if (!filas.length) html = '<div class="loading">Sin resultados.</div>';
+    if (filas.length > 500) html += '<div class="loading">Mostrando los primeros 500 de ' + filas.length + ' registros. Afiná la búsqueda para ver el resto.</div>';
+    document.getElementById('logWrap').innerHTML = html;
+  }
+
+  // ---------- Dotación ----------
+  function renderDotacion() {
+    let html = '<table><thead><tr><th>Área</th><th>Cantidad</th></tr></thead><tbody>';
+    DATA.dotacionPorArea.forEach(d => {
+      html += '<tr><td>' + d.area + '</td><td>' + d.cantidad + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    if (!DATA.dotacionPorArea.length) html = '<div class="loading">Sin datos de dotación por área.</div>';
+    document.getElementById('dotacionWrap').innerHTML = html;
+  }
+
+  // ---------- Listeners de filtros ----------
+  document.getElementById('buscarCap').addEventListener('input', renderTabla);
+  document.getElementById('filtroArea').addEventListener('change', renderTabla);
+  document.getElementById('buscarPersona').addEventListener('input', renderPersonas);
+  document.getElementById('buscarLog').addEventListener('input', renderLog);
+</script>
+
+</body>
+</html>
