@@ -16,6 +16,7 @@
     --accent: #6c8cff;
     --good: #4caf82;
     --warn: #e0955c;
+    --bad: #d96a6a;
   }
   * { box-sizing: border-box; }
   body {
@@ -33,6 +34,14 @@
   h1 { font-size: 22px; margin: 0; }
   .subtitle { color: var(--ink-soft); font-size: 13px; margin-top: 4px; }
 
+  .refresh-btn {
+    padding: 9px 18px; border-radius: 12px; border: 1px solid var(--glass-border);
+    background: rgba(255,255,255,0.55); font-size: 13px; cursor: pointer; color: var(--ink);
+    font-weight: 600;
+  }
+  .refresh-btn:hover { background: rgba(255,255,255,0.8); }
+  .refresh-btn:disabled { opacity: .6; cursor: default; }
+
   .glass {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
@@ -45,11 +54,23 @@
   .kpis {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 14px; margin-bottom: 20px;
+    gap: 14px; margin-bottom: 16px;
   }
   .kpi { padding: 16px 18px; }
   .kpi .value { font-size: 26px; font-weight: 700; }
   .kpi .label { font-size: 11px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .04em; }
+
+  /* ---- Adherencia por instructor (Distribuidor / Equipo DPO / Externo) ---- */
+  .instructores {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px; margin-bottom: 20px;
+  }
+  .instr-card { padding: 18px 20px; }
+  .instr-card .nombre { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 6px; }
+  .instr-card .cifras { font-size: 13px; color: var(--ink-soft); margin-bottom: 10px; }
+  .instr-card .cifras b { color: var(--ink); }
+  .instr-card .pctnum { font-size: 22px; font-weight: 700; float: right; margin-top: -34px; }
 
   nav.tabs { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
   nav.tabs button {
@@ -79,9 +100,20 @@
   }
   .badge.good { background: rgba(76,175,130,0.15); color: var(--good); }
   .badge.warn { background: rgba(224,149,92,0.18); color: var(--warn); }
+  .badge.bad { background: rgba(217,106,106,0.15); color: var(--bad); }
+
+  .link-btn {
+    display: inline-block; padding: 3px 10px; margin-right: 4px; border-radius: 999px;
+    font-size: 11px; font-weight: 600; text-decoration: none;
+    background: rgba(108,140,255,0.15); color: var(--accent);
+  }
+  .link-btn:hover { background: rgba(108,140,255,0.3); }
+  .link-btn.disabled { background: rgba(107,114,128,0.1); color: var(--ink-soft); pointer-events: none; }
 
   .bar-bg { background: rgba(255,255,255,0.6); border-radius: 999px; height: 6px; overflow: hidden; width: 100px; display: inline-block; vertical-align: middle; }
   .bar-fill { background: var(--accent); height: 100%; }
+  .bar-fill.good { background: var(--good); }
+  .bar-fill.warn { background: var(--warn); }
 
   .panel { padding: 20px; margin-bottom: 20px; }
   .panel h2 { font-size: 15px; margin: 0 0 14px 0; }
@@ -91,6 +123,20 @@
   .stack-bar { display: flex; width: 140px; height: 10px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,0.6); }
   .stack-bar .c { background: var(--good); }
   .stack-bar .p { background: var(--warn); }
+
+  /* ---- Ficha de colaborador (tab Personas) ---- */
+  .persona-ficha { padding: 20px; margin-bottom: 16px; display: none; }
+  .persona-ficha.show { display: block; }
+  .persona-ficha .top { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+  .ring {
+    width: 84px; height: 84px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 18px; position: relative; flex-shrink: 0;
+    background: conic-gradient(var(--accent) calc(var(--pct,0)*1%), rgba(255,255,255,0.5) 0);
+  }
+  .ring::before { content:''; position: absolute; width: 62px; height: 62px; border-radius: 50%; background: #fff8; backdrop-filter: blur(2px); }
+  .ring span { position: relative; }
+  .ambiguo-warn { font-size: 11px; color: var(--bad); margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -100,27 +146,50 @@
     <h1>PAC Capacitaciones 2026</h1>
     <div class="subtitle" id="updated">Conectando con la planilla…</div>
   </div>
+  <button class="refresh-btn" id="btnRefrescar">Actualizar ahora</button>
 </header>
 
 <div class="kpis" id="kpis">
-  <div class="glass kpi"><div class="value">—</div><div class="label">Capacitaciones</div></div>
-  <div class="glass kpi"><div class="value">—</div><div class="label">Completas</div></div>
+  <div class="glass kpi"><div class="value">—</div><div class="label">Capacitaciones (PAC)</div></div>
+  <div class="glass kpi"><div class="value">—</div><div class="label">Hechas</div></div>
   <div class="glass kpi"><div class="value">—</div><div class="label">Pendientes</div></div>
-  <div class="glass kpi"><div class="value">—</div><div class="label">Personas</div></div>
-  <div class="glass kpi"><div class="value">—</div><div class="label">% Asistencia prom.</div></div>
+  <div class="glass kpi"><div class="value">—</div><div class="label">% Cumplido general</div></div>
+  <div class="glass kpi"><div class="value">—</div><div class="label">Adherencia prom. colaboradores</div></div>
   <div class="glass kpi"><div class="value">—</div><div class="label">Dotación total</div></div>
 </div>
 
+<div class="instructores" id="instructores">
+  <!-- se completa con JS: una tarjeta por Distribuidor / Equipo DPO / Externo -->
+</div>
+
 <nav class="tabs">
-  <button data-tab="resumen" class="active">Resumen</button>
+  <button data-tab="cronograma" class="active">Cronograma PAC</button>
+  <button data-tab="resumen">Resumen por área</button>
   <button data-tab="capacitaciones">Capacitaciones</button>
-  <button data-tab="personas">Personas</button>
+  <button data-tab="personas">Colaboradores</button>
   <button data-tab="gantt">Gantt</button>
   <button data-tab="log">Log detallado</button>
   <button data-tab="dotacion">Dotación</button>
 </nav>
 
-<div id="resumen" class="tabpanel active">
+<!-- ---------- CRONOGRAMA (hoja PAC 2026) ---------- -->
+<div id="cronograma" class="tabpanel active">
+  <div class="glass panel">
+    <h2>Cronograma — PAC 2026</h2>
+    <div class="filters">
+      <input type="text" id="buscarCrono" placeholder="Buscar capacitación o pilar…">
+      <select id="filtroInstructor"><option value="">Todos los instructores</option></select>
+      <select id="filtroEstado">
+        <option value="">Todos los estados</option>
+        <option value="hecho">Hecho</option>
+        <option value="pendiente">Pendiente</option>
+      </select>
+    </div>
+    <div id="cronoWrap" class="loading">Cargando…</div>
+  </div>
+</div>
+
+<div id="resumen" class="tabpanel">
   <div class="glass panel">
     <h2>Resumen por área / pilar</h2>
     <div id="resumenWrap" class="loading">Cargando…</div>
@@ -140,10 +209,31 @@
 
 <div id="personas" class="tabpanel">
   <div class="glass panel">
-    <h2>Estado por persona</h2>
+    <h2>Colaboradores — adherencia real</h2>
     <div class="filters">
-      <input type="text" id="buscarPersona" placeholder="Buscar persona…">
+      <select id="areaPersonaSelect"><option value="">Elegí un área…</option></select>
+      <input list="listaPersonas" type="text" id="buscarPersona" placeholder="Escribí el nombre…">
+      <datalist id="listaPersonas"></datalist>
     </div>
+  </div>
+
+  <div class="glass persona-ficha" id="fichaPersona">
+    <div class="top">
+      <div class="ring" id="ringPersona" style="--pct:0"><span id="ringPersonaTxt">0%</span></div>
+      <div>
+        <div style="font-size:16px;font-weight:700" id="nombrePersona">—</div>
+        <div style="font-size:13px;color:var(--ink-soft)" id="cifrasPersona">— asignadas · — hechas · — pendientes</div>
+        <div class="ambiguo-warn" id="avisoAmbiguo"></div>
+      </div>
+    </div>
+    <div style="margin-top:14px">
+      <div style="font-size:12px;color:var(--ink-soft);margin-bottom:6px">Capacitaciones pendientes</div>
+      <div class="pendientes-list" id="pendientesPersona" style="max-width:none">—</div>
+    </div>
+  </div>
+
+  <div class="glass panel">
+    <h2>Todos los colaboradores</h2>
     <div id="personasWrap" class="loading">Cargando…</div>
   </div>
 </div>
@@ -185,6 +275,11 @@
     return Math.round(pct) + '%';
   }
 
+  function linkBtn(url, etiqueta) {
+    if (!url) return '<span class="link-btn disabled">' + etiqueta + '</span>';
+    return '<a class="link-btn" href="' + url + '" target="_blank" rel="noopener">' + etiqueta + '</a>';
+  }
+
   // ---------- Tabs ----------
   document.querySelectorAll('nav.tabs button').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -196,30 +291,41 @@
   });
 
   // ---------- Carga de datos ----------
-  fetch(API_URL)
-    .then(res => res.json())
-    .then(data => { DATA = data; render(); })
-    .catch(err => {
-      document.getElementById('updated').textContent = 'Error conectando con la API: ' + err.message;
-      ['tablaWrap','personasWrap','ganttWrap','logWrap','dotacionWrap','resumenWrap'].forEach(id => {
-        document.getElementById(id).innerHTML = '<div class="loading">No se pudo cargar. Revisá API_URL y el deploy de Apps Script.</div>';
+  function cargar() {
+    document.getElementById('updated').textContent = 'Actualizando…';
+    return fetch(API_URL)
+      .then(res => res.json())
+      .then(data => { DATA = data; render(); })
+      .catch(err => {
+        document.getElementById('updated').textContent = 'Error conectando con la API: ' + err.message;
+        ['tablaWrap','personasWrap','ganttWrap','logWrap','dotacionWrap','resumenWrap','cronoWrap'].forEach(id => {
+          document.getElementById(id).innerHTML = '<div class="loading">No se pudo cargar. Revisá API_URL y el deploy de Apps Script.</div>';
+        });
       });
-    });
+  }
+  cargar();
+
+  document.getElementById('btnRefrescar').addEventListener('click', () => {
+    const btn = document.getElementById('btnRefrescar');
+    btn.disabled = true; btn.textContent = 'Actualizando…';
+    cargar().finally(() => { btn.disabled = false; btn.textContent = 'Actualizar ahora'; });
+  });
 
   function render() {
     if (!DATA) return;
     const k = DATA.kpis;
     const kpiEls = document.querySelectorAll('.kpi .value');
     kpiEls[0].textContent = k.totalCapacitaciones;
-    kpiEls[1].textContent = k.completas;
-    kpiEls[2].textContent = k.pendientes;
-    kpiEls[3].textContent = k.totalPersonas;
-    kpiEls[4].textContent = fmtPct(k.promedioAsistencia);
+    kpiEls[1].textContent = k.totalHechas;
+    kpiEls[2].textContent = k.totalPendientes;
+    kpiEls[3].textContent = fmtPct(k.porcentajeGeneral);
+    kpiEls[4].textContent = fmtPct(k.promedioAdherenciaPersonas);
     kpiEls[5].textContent = k.totalDotacion;
 
     document.getElementById('updated').textContent =
       'Actualizado ' + new Date(DATA.actualizado).toLocaleString('es-AR');
 
+    // selects (solo la primera vez)
     const filtroArea = document.getElementById('filtroArea');
     if (filtroArea.options.length <= 1) {
       DATA.resumenAreas.forEach(r => {
@@ -228,13 +334,92 @@
         filtroArea.appendChild(opt);
       });
     }
+    const filtroInstructor = document.getElementById('filtroInstructor');
+    if (filtroInstructor.options.length <= 1) {
+      DATA.resumenInstructor.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r.instructor; opt.textContent = r.instructor;
+        filtroInstructor.appendChild(opt);
+      });
+    }
+    const areaPersonaSelect = document.getElementById('areaPersonaSelect');
+    if (areaPersonaSelect.options.length <= 1) {
+      const areasPersonas = Array.from(new Set(DATA.log.map(r => r.area).filter(Boolean))).sort();
+      areasPersonas.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a; opt.textContent = a;
+        areaPersonaSelect.appendChild(opt);
+      });
+    }
 
+    renderInstructores();
+    renderCronograma();
     renderResumen();
     renderTabla();
     renderPersonas();
+    renderFichaPersona();
     renderGantt();
     renderLog();
     renderDotacion();
+  }
+
+  // ---------- Adherencia por instructor (Distribuidor / Equipo DPO / Externo) ----------
+  function renderInstructores() {
+    let html = '';
+    DATA.resumenInstructor.forEach(r => {
+      const pct = Math.round(r.porcentaje * 100);
+      const barClass = pct >= 85 ? 'good' : (pct >= 60 ? '' : 'warn');
+      html += '<div class="glass instr-card">' +
+        '<div class="nombre">' + r.instructor + '<span class="pctnum">' + pct + '%</span></div>' +
+        '<div class="cifras">Asignadas <b>' + r.asignadas + '</b> · Hechas <b>' + r.hechas + '</b> · Pendientes <b>' + r.pendientes + '</b></div>' +
+        '<div class="bar-bg" style="width:100%"><div class="bar-fill ' + barClass + '" style="width:' + pct + '%"></div></div>' +
+        '</div>';
+    });
+    document.getElementById('instructores').innerHTML = html || '<div class="loading">Sin datos de instructores.</div>';
+  }
+
+  // ---------- Cronograma PAC 2026 ----------
+  function renderCronograma() {
+    const texto = document.getElementById('buscarCrono').value.toLowerCase();
+    const instr = document.getElementById('filtroInstructor').value;
+    const estado = document.getElementById('filtroEstado').value;
+
+    const filas = DATA.cronograma.filter(c => {
+      const matchTexto = !texto ||
+        (c.capacitacion || '').toLowerCase().includes(texto) ||
+        (c.pilar || '').toLowerCase().includes(texto);
+      const matchInstr = !instr || c.instructor === instr;
+      const matchEstado = !estado || (estado === 'hecho' ? c.hecho : !c.hecho);
+      return matchTexto && matchInstr && matchEstado;
+    });
+
+    let html = '<table><thead><tr>' +
+      '<th>Pilar</th><th>Capacitación</th><th>Instructor</th><th>Mes(es)</th><th>Estado</th>' +
+      '<th>% Asistencia</th><th>Material</th><th>Test</th><th>Minuta</th>' +
+      '</tr></thead><tbody>';
+
+    filas.forEach(c => {
+      const meses = [c.mes, c.mes2].filter(Boolean).join(' / ') || '—';
+      const estadoBadge = c.hecho
+        ? '<span class="badge good">Hecho</span>'
+        : '<span class="badge warn">Pendiente</span>';
+      const pct = c.porcentajeAsistencia !== null && c.porcentajeAsistencia !== undefined
+        ? fmtPct(c.porcentajeAsistencia) : '—';
+      html += '<tr>' +
+        '<td><span class="badge">' + (c.pilar || '—') + '</span></td>' +
+        '<td>' + c.capacitacion + '</td>' +
+        '<td>' + c.instructor + '</td>' +
+        '<td>' + meses + '</td>' +
+        '<td>' + estadoBadge + '</td>' +
+        '<td>' + pct + '</td>' +
+        '<td>' + linkBtn(c.materialUrl, 'Ver') + '</td>' +
+        '<td>' + linkBtn(c.testUrl, 'Ver') + '</td>' +
+        '<td>' + linkBtn(c.minutaUrl, 'Ver') + '</td>' +
+        '</tr>';
+    });
+    html += '</tbody></table>';
+    if (!filas.length) html = '<div class="loading">Sin resultados para este filtro.</div>';
+    document.getElementById('cronoWrap').innerHTML = html;
   }
 
   // ---------- Resumen por área ----------
@@ -257,7 +442,7 @@
     document.getElementById('resumenWrap').innerHTML = html;
   }
 
-  // ---------- Capacitaciones (matriz) ----------
+  // ---------- Capacitaciones (matriz BASE CAPACITACIONES) ----------
   function renderTabla() {
     const filtroTexto = document.getElementById('buscarCap').value.toLowerCase();
     const filtroArea = document.getElementById('filtroArea').value;
@@ -266,21 +451,23 @@
       const matchArea = !filtroArea || c.area === filtroArea;
       const matchTexto = !filtroTexto ||
         (c.capacitacion || '').toLowerCase().includes(filtroTexto) ||
-        c.asistentes.some(a => a.toLowerCase().includes(filtroTexto));
+        c.asignados.some(a => a.toLowerCase().includes(filtroTexto));
       return matchArea && matchTexto;
     });
 
     let html = '<table><thead><tr>' +
-      '<th>Capacitación</th><th>Área</th><th>Asistentes</th><th>% Asistencia</th>' +
+      '<th>Capacitación</th><th>Área</th><th>Asignados</th><th>% Asistencia</th><th>Test</th><th>Minuta</th>' +
       '</tr></thead><tbody>';
 
     filas.forEach(c => {
-      const pct = c.porcentajeAsistencia !== null ? fmtPct(c.porcentajeAsistencia) : fmtPct(c.totalAsistentes / (DATA.personas.length || 1));
+      const pct = c.porcentajeAsistencia !== null ? fmtPct(c.porcentajeAsistencia) : '—';
       html += '<tr>' +
         '<td>' + c.capacitacion + '</td>' +
         '<td><span class="badge">' + (c.area || '—') + '</span></td>' +
-        '<td>' + c.totalAsistentes + ' / ' + DATA.personas.length + '</td>' +
+        '<td>' + c.totalAsignados + ' / ' + DATA.personas.length + '</td>' +
         '<td>' + pct + '</td>' +
+        '<td>' + linkBtn(c.testUrl, 'Ver') + '</td>' +
+        '<td>' + linkBtn(c.minutaUrl, 'Ver') + '</td>' +
         '</tr>';
     });
     html += '</tbody></table>';
@@ -288,28 +475,70 @@
     document.getElementById('tablaWrap').innerHTML = html;
   }
 
-  // ---------- Personas ----------
+  // ---------- Colaboradores: tabla completa ----------
   function renderPersonas() {
     const filtroTexto = document.getElementById('buscarPersona').value.toLowerCase();
     const filas = DATA.personasStatus.filter(p => !filtroTexto || p.persona.toLowerCase().includes(filtroTexto));
 
     let html = '<table><thead><tr>' +
-      '<th>Persona</th><th>Hechas</th><th>Pendientes</th><th>% Asistencia</th><th>Capacitaciones pendientes</th>' +
+      '<th>Persona</th><th>Asignadas</th><th>Hechas</th><th>Pendientes</th><th>% Adherencia</th><th>Capacitaciones pendientes</th>' +
       '</tr></thead><tbody>';
 
     filas.forEach(p => {
       const pct = Math.round(p.porcentaje * 100);
+      const barClass = pct >= 85 ? 'good' : (pct >= 60 ? '' : 'warn');
       html += '<tr>' +
-        '<td>' + p.persona + '</td>' +
-        '<td>' + p.hechas + ' / ' + p.total + '</td>' +
+        '<td>' + p.persona + (p.ambiguo ? ' <span class="badge bad" title="Hay más de una persona con este apellido en la matriz">⚠</span>' : '') + '</td>' +
+        '<td>' + p.totalAsignadas + '</td>' +
+        '<td>' + p.hechas + '</td>' +
         '<td><span class="badge ' + (p.pendientes ? 'warn' : 'good') + '">' + p.pendientes + '</span></td>' +
-        '<td><div class="bar-bg"><div class="bar-fill" style="width:' + pct + '%"></div></div> ' + pct + '%</td>' +
+        '<td><div class="bar-bg"><div class="bar-fill ' + barClass + '" style="width:' + pct + '%"></div></div> ' + pct + '%</td>' +
         '<td class="pendientes-list">' + (p.pendientesNombres.join(', ') || '—') + '</td>' +
         '</tr>';
     });
     html += '</tbody></table>';
     if (!filas.length) html = '<div class="loading">Sin resultados.</div>';
     document.getElementById('personasWrap').innerHTML = html;
+  }
+
+  // ---------- Colaboradores: ficha individual (área + nombre) ----------
+  function poblarDatalistPersonas() {
+    const area = document.getElementById('areaPersonaSelect').value;
+    const datalist = document.getElementById('listaPersonas');
+    // el listado de personas de la matriz no tiene área propia; se infiere
+    // del log de asistencia real (misma persona = mismo apellido)
+    const porArea = {};
+    DATA.log.forEach(r => { porArea[normalizar(r.apellido)] = r.area; });
+    const nombres = DATA.personasStatus
+      .filter(p => !area || porArea[normalizar(p.persona)] === area)
+      .map(p => p.persona)
+      .sort();
+    datalist.innerHTML = nombres.map(n => '<option value="' + n + '">').join('');
+  }
+
+  function normalizar(s) {
+    return (s || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+  }
+
+  function renderFichaPersona() {
+    const nombre = document.getElementById('buscarPersona').value.trim();
+    const ficha = document.getElementById('fichaPersona');
+    if (!nombre) { ficha.classList.remove('show'); return; }
+
+    const p = DATA.personasStatus.find(x => normalizar(x.persona) === normalizar(nombre));
+    if (!p) { ficha.classList.remove('show'); return; }
+
+    ficha.classList.add('show');
+    const pct = Math.round(p.porcentaje * 100);
+    document.getElementById('ringPersona').style.setProperty('--pct', pct);
+    document.getElementById('ringPersonaTxt').textContent = pct + '%';
+    document.getElementById('nombrePersona').textContent = p.persona;
+    document.getElementById('cifrasPersona').textContent =
+      p.totalAsignadas + ' asignadas · ' + p.hechas + ' hechas · ' + p.pendientes + ' pendientes';
+    document.getElementById('avisoAmbiguo').textContent = p.ambiguo
+      ? '⚠ Hay más de un colaborador con este apellido en la matriz — verificar manualmente cuál es.'
+      : '';
+    document.getElementById('pendientesPersona').textContent = p.pendientesNombres.join(', ') || 'Ninguna — 100% al día.';
   }
 
   // ---------- Gantt ----------
@@ -372,9 +601,20 @@
   }
 
   // ---------- Listeners de filtros ----------
+  document.getElementById('buscarCrono').addEventListener('input', renderCronograma);
+  document.getElementById('filtroInstructor').addEventListener('change', renderCronograma);
+  document.getElementById('filtroEstado').addEventListener('change', renderCronograma);
   document.getElementById('buscarCap').addEventListener('input', renderTabla);
   document.getElementById('filtroArea').addEventListener('change', renderTabla);
-  document.getElementById('buscarPersona').addEventListener('input', renderPersonas);
+  document.getElementById('areaPersonaSelect').addEventListener('change', () => {
+    document.getElementById('buscarPersona').value = '';
+    poblarDatalistPersonas();
+    renderFichaPersona();
+  });
+  document.getElementById('buscarPersona').addEventListener('input', () => {
+    renderPersonas();
+    renderFichaPersona();
+  });
   document.getElementById('buscarLog').addEventListener('input', renderLog);
 </script>
 
