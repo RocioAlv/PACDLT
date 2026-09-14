@@ -109,6 +109,7 @@
   }
   .link-btn:hover { background: rgba(108,140,255,0.3); }
   .link-btn.disabled { background: rgba(107,114,128,0.1); color: var(--ink-soft); pointer-events: none; }
+  .sin-archivo { font-size: 11px; color: var(--ink-soft); font-style: italic; }
 
   .bar-bg { background: rgba(255,255,255,0.6); border-radius: 999px; height: 6px; overflow: hidden; width: 100px; display: inline-block; vertical-align: middle; }
   .bar-fill { background: var(--accent); height: 100%; }
@@ -123,6 +124,26 @@
   .stack-bar { display: flex; width: 140px; height: 10px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,0.6); }
   .stack-bar .c { background: var(--good); }
   .stack-bar .p { background: var(--warn); }
+
+  /* ---- Gantt como matriz capacitación x persona ---- */
+  .gantt-scroll { overflow-x: auto; padding-bottom: 6px; }
+  table.gantt-table { border-collapse: separate; border-spacing: 0; font-size: 12px; white-space: nowrap; }
+  table.gantt-table th, table.gantt-table td { padding: 6px 9px; text-align: center; }
+  table.gantt-table thead th {
+    color: var(--ink); font-weight: 700; font-size: 10px; text-transform: none;
+    background: rgba(255,255,255,0.55); border-bottom: 1px solid rgba(255,255,255,0.7);
+  }
+  table.gantt-table thead th.persona-col {
+    writing-mode: vertical-rl; transform: rotate(180deg); height: 120px; vertical-align: bottom;
+    max-width: 22px;
+  }
+  table.gantt-table td.cap-col, table.gantt-table th.cap-col {
+    text-align: left; position: sticky; left: 0; background: rgba(255,255,255,0.75);
+    backdrop-filter: blur(6px); z-index: 2; font-weight: 600; max-width: 260px;
+    white-space: normal;
+  }
+  table.gantt-table tbody tr:nth-child(even) td:not(.cap-col) { background: rgba(255,255,255,0.25); }
+  table.gantt-table td.x-mark { color: var(--good); font-weight: 700; }
 
   /* ---- Ficha de colaborador (tab Personas) ---- */
   .persona-ficha { padding: 20px; margin-bottom: 16px; display: none; }
@@ -280,6 +301,20 @@
     return '<a class="link-btn" href="' + url + '" target="_blank" rel="noopener">' + etiqueta + '</a>';
   }
 
+  // Una capacitación puede tener varios archivos del mismo tipo (ej. un PPT de
+  // material teórico + un PDF de test). Si no hay ninguno, muestra "Sin {tipo}"
+  // en vez de un botón gris — así se distingue "no hay nada" de "hay, mirá".
+  function linksList(arr, tipoLabel) {
+    if (!arr || !arr.length) {
+      return '<span class="sin-archivo">Sin ' + tipoLabel.toLowerCase() + '</span>';
+    }
+    return arr.map((item, i) => {
+      const etiqueta = arr.length > 1 ? ('Ver ' + (i + 1)) : 'Ver';
+      const titulo = item.archivo ? ' title="' + item.archivo.replace(/"/g, '&quot;') + '"' : '';
+      return '<a class="link-btn" href="' + item.url + '" target="_blank" rel="noopener"' + titulo + '>' + etiqueta + '</a>';
+    }).join(' ');
+  }
+
   // ---------- Tabs ----------
   document.querySelectorAll('nav.tabs button').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -296,7 +331,17 @@
     const url = forzarRefresco ? (API_URL + '?refrescar=1') : API_URL;
     return fetch(url)
       .then(res => res.json())
-      .then(data => { DATA = data; render(); })
+      .then(data => {
+        if (data && data.error) {
+          document.getElementById('updated').textContent = 'Error en el backend: ' + data.mensaje;
+          ['tablaWrap','personasWrap','ganttWrap','logWrap','dotacionWrap','resumenWrap','cronoWrap'].forEach(id => {
+            document.getElementById(id).innerHTML = '<div class="loading">' + data.mensaje + '</div>';
+          });
+          console.error('Error del backend:', data.mensaje, data.stack);
+          return;
+        }
+        DATA = data; render();
+      })
       .catch(err => {
         document.getElementById('updated').textContent = 'Error conectando con la API: ' + err.message;
         ['tablaWrap','personasWrap','ganttWrap','logWrap','dotacionWrap','resumenWrap','cronoWrap'].forEach(id => {
@@ -414,8 +459,8 @@
         '<td>' + estadoBadge + '</td>' +
         '<td>' + pct + '</td>' +
         '<td>' + linkBtn(c.materialUrl, 'Ver') + '</td>' +
-        '<td>' + linkBtn(c.testUrl, 'Ver') + '</td>' +
-        '<td>' + linkBtn(c.minutaUrl, 'Ver') + '</td>' +
+        '<td>' + linksList(c.testLinks, 'test') + '</td>' +
+        '<td>' + linksList(c.minutaLinks, 'minuta') + '</td>' +
         '</tr>';
     });
     html += '</tbody></table>';
@@ -467,8 +512,8 @@
         '<td><span class="badge">' + (c.area || '—') + '</span></td>' +
         '<td>' + c.totalAsignados + ' / ' + DATA.personas.length + '</td>' +
         '<td>' + pct + '</td>' +
-        '<td>' + linkBtn(c.testUrl, 'Ver') + '</td>' +
-        '<td>' + linkBtn(c.minutaUrl, 'Ver') + '</td>' +
+        '<td>' + linksList(c.testLinks, 'test') + '</td>' +
+        '<td>' + linksList(c.minutaLinks, 'minuta') + '</td>' +
         '</tr>';
     });
     html += '</tbody></table>';
@@ -542,21 +587,26 @@
     document.getElementById('pendientesPersona').textContent = p.pendientesNombres.join(', ') || 'Ninguna — 100% al día.';
   }
 
-  // ---------- Gantt ----------
+  // ---------- Gantt: matriz capacitación x persona ----------
   function renderGantt() {
-    let html = '<table><thead><tr>' +
-      '<th>Capacitación</th><th>Instructor</th><th>Pilar</th><th>Duración</th><th>Programada para</th>' +
-      '</tr></thead><tbody>';
+    const personas = DATA.ganttPersonas || [];
+    let html = '<div class="gantt-scroll"><table class="gantt-table"><thead><tr>' +
+      '<th class="cap-col">Capacitación</th><th>Pilar</th><th>Instructor</th><th>Duración</th>';
+    personas.forEach(p => { html += '<th class="persona-col">' + p + '</th>'; });
+    html += '</tr></thead><tbody>';
+
     DATA.gantt.forEach(g => {
-      html += '<tr>' +
-        '<td>' + g.capacitacion + '</td>' +
-        '<td>' + (g.instructor || '—') + '</td>' +
+      html += '<tr><td class="cap-col">' + g.capacitacion + '</td>' +
         '<td><span class="badge">' + (g.pilar || '—') + '</span></td>' +
-        '<td>' + (g.duracion || '—') + '</td>' +
-        '<td>' + (g.programadaPara.join(', ') || '—') + '</td>' +
-        '</tr>';
+        '<td>' + (g.instructor || '—') + '</td>' +
+        '<td>' + (g.duracion || '—') + '</td>';
+      personas.forEach(p => {
+        const marcado = g.programadaPara.indexOf(p) !== -1;
+        html += '<td class="' + (marcado ? 'x-mark' : '') + '">' + (marcado ? '✓' : '') + '</td>';
+      });
+      html += '</tr>';
     });
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
     if (!DATA.gantt.length) html = '<div class="loading">Sin datos de Gantt.</div>';
     document.getElementById('ganttWrap').innerHTML = html;
   }
