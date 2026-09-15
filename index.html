@@ -27,7 +27,7 @@
     background: linear-gradient(135deg, var(--grad-a), var(--grad-b) 60%, var(--grad-c));
     min-height: 100vh;
     padding: 24px;
-    overflow-x: hidden; /* red de seguridad: nada empuja el body a lo ancho */
+    overflow-x: hidden;
   }
   header {
     display: flex; justify-content: space-between; align-items: center;
@@ -62,7 +62,6 @@
   .kpi .value { font-size: 26px; font-weight: 700; }
   .kpi .label { font-size: 11px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .04em; }
 
-  /* ---- Adherencia por instructor (Distribuidor / Equipo DPO / Externo) ---- */
   .instructores {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -74,7 +73,6 @@
   .instr-card .cifras b { color: var(--ink); }
   .instr-card .pctnum { font-size: 22px; font-weight: 700; flex-shrink:0; }
 
-  /* ---- Tabs: fila con scroll horizontal en mobile en vez de amontonarse ---- */
   nav.tabs {
     display: flex; gap: 8px; margin-bottom: 18px;
     overflow-x: auto; -webkit-overflow-scrolling: touch;
@@ -99,11 +97,10 @@
     width: 100%;
   }
 
-  /* ---- Tablas normales: en mobile scrollean horizontal en vez de romper el layout ---- */
   .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -4px; padding: 0 4px; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   .table-scroll table { min-width: 640px; }
-  #dotacionWrap table { min-width: 0; } /* tabla chica de 2 columnas, no necesita forzar ancho */
+  #dotacionWrap table { min-width: 0; }
   th, td { text-align: left; padding: 9px 12px; }
   thead th { color: var(--ink-soft); font-weight: 600; font-size: 11px; text-transform: uppercase; white-space: nowrap; }
   tbody tr { border-top: 1px solid rgba(255,255,255,0.5); cursor: default; }
@@ -141,7 +138,6 @@
   .stack-bar .c { background: var(--good); }
   .stack-bar .p { background: var(--warn); }
 
-  /* ---- Gantt como matriz capacitación x persona ---- */
   .gantt-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 6px; }
   table.gantt-table { border-collapse: separate; border-spacing: 0; font-size: 12px; white-space: nowrap; }
   table.gantt-table th, table.gantt-table td { padding: 6px 9px; text-align: center; }
@@ -161,7 +157,6 @@
   table.gantt-table tbody tr:nth-child(even) td:not(.cap-col) { background: rgba(255,255,255,0.25); }
   table.gantt-table td.x-mark { color: var(--good); font-weight: 700; }
 
-  /* ---- Ficha de colaborador (tab Personas) ---- */
   .persona-ficha { padding: 20px; margin-bottom: 16px; display: none; }
   .persona-ficha.show { display: block; }
   .persona-ficha .top { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
@@ -175,7 +170,6 @@
   .ring span { position: relative; }
   .ambiguo-warn { font-size: 11px; color: var(--bad); margin-top: 6px; }
 
-  /* ================= RESPONSIVE ================= */
   @media (max-width: 720px) {
     body { padding: 14px; }
     h1 { font-size: 19px; }
@@ -219,9 +213,7 @@
   <div class="glass kpi"><div class="value">—</div><div class="label">Dotación total</div></div>
 </div>
 
-<div class="instructores" id="instructores">
-  <!-- se completa con JS: una tarjeta por Distribuidor / Equipo DPO / Externo -->
-</div>
+<div class="instructores" id="instructores"></div>
 
 <nav class="tabs">
   <button data-tab="cronograma" class="active">Cronograma PAC</button>
@@ -233,7 +225,6 @@
   <button data-tab="dotacion">Dotación</button>
 </nav>
 
-<!-- ---------- CRONOGRAMA (hoja PAC 2026) ---------- -->
 <div id="cronograma" class="tabpanel active">
   <div class="glass panel">
     <h2>Cronograma — PAC 2026</h2>
@@ -324,7 +315,6 @@
 </div>
 
 <script>
-  // ⚠️ Pegá acá la URL /exec de tu Web App de Apps Script (Deploy > Manage deployments)
   const API_URL = 'https://script.google.com/macros/s/AKfycbwjHtjy5S57vRcMhqXEpqveZaOStFRJSdRd4i8ufx9xrH2iA8YoyAQcINXgP6y7Ipmx/exec';
 
   let DATA = null;
@@ -336,14 +326,6 @@
     return Math.round(pct) + '%';
   }
 
-  function linkBtn(url, etiqueta) {
-    if (!url) return '<span class="link-btn disabled">' + etiqueta + '</span>';
-    return '<a class="link-btn" href="' + url + '" target="_blank" rel="noopener">' + etiqueta + '</a>';
-  }
-
-  // Una capacitación puede tener varios archivos del mismo tipo (ej. un PPT de
-  // material teórico + un PDF de test). Si no hay ninguno, muestra "Sin {tipo}"
-  // en vez de un botón gris — así se distingue "no hay nada" de "hay, mirá".
   function linksList(arr, tipoLabel) {
     if (!arr || !arr.length) {
       return '<span class="sin-archivo">Sin ' + tipoLabel.toLowerCase() + '</span>';
@@ -355,7 +337,6 @@
     }).join(' ');
   }
 
-  // ---------- Tabs ----------
   document.querySelectorAll('nav.tabs button').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
@@ -366,7 +347,6 @@
     });
   });
 
-  // ---------- Carga de datos ----------
   function cargar(forzarRefresco) {
     document.getElementById('updated').textContent = 'Actualizando…';
     const url = forzarRefresco ? (API_URL + '?refrescar=1') : API_URL;
@@ -412,7 +392,6 @@
     document.getElementById('updated').textContent =
       'Actualizado ' + new Date(DATA.actualizado).toLocaleString('es-AR');
 
-    // selects (solo la primera vez)
     const filtroArea = document.getElementById('filtroArea');
     if (filtroArea.options.length <= 1) {
       DATA.resumenAreas.forEach(r => {
@@ -450,7 +429,6 @@
     renderDotacion();
   }
 
-  // ---------- Adherencia por instructor (Distribuidor / Equipo DPO / Externo) ----------
   function renderInstructores() {
     let html = '';
     DATA.resumenInstructor.forEach(r => {
@@ -465,7 +443,6 @@
     document.getElementById('instructores').innerHTML = html || '<div class="loading">Sin datos de instructores.</div>';
   }
 
-  // ---------- Cronograma PAC 2026 ----------
   function renderCronograma() {
     const texto = document.getElementById('buscarCrono').value.toLowerCase();
     const instr = document.getElementById('filtroInstructor').value;
@@ -499,7 +476,7 @@
         '<td>' + meses + '</td>' +
         '<td>' + estadoBadge + '</td>' +
         '<td>' + pct + '</td>' +
-        '<td>' + linkBtn(c.materialUrl, 'Ver') + '</td>' +
+        '<td>' + linksList(c.materialLinks, 'material') + '</td>' +
         '<td>' + linksList(c.testLinks, 'test') + '</td>' +
         '<td>' + linksList(c.minutaLinks, 'minuta') + '</td>' +
         '</tr>';
@@ -509,7 +486,6 @@
     document.getElementById('cronoWrap').innerHTML = html;
   }
 
-  // ---------- Resumen por área ----------
   function renderResumen() {
     let html = '<div class="table-scroll"><table><thead><tr>' +
       '<th>Área / Pilar</th><th>Total</th><th>Completas</th><th>Pendientes</th><th>Progreso</th>' +
@@ -529,7 +505,6 @@
     document.getElementById('resumenWrap').innerHTML = html;
   }
 
-  // ---------- Capacitaciones (matriz BASE CAPACITACIONES) ----------
   function renderTabla() {
     const filtroTexto = document.getElementById('buscarCap').value.toLowerCase();
     const filtroArea = document.getElementById('filtroArea').value;
@@ -543,7 +518,7 @@
     });
 
     let html = '<div class="table-scroll"><table><thead><tr>' +
-      '<th>Capacitación</th><th>Área</th><th>Asignados</th><th>% Asistencia</th><th>Test</th><th>Minuta</th>' +
+      '<th>Capacitación</th><th>Área</th><th>Asignados</th><th>% Asistencia</th><th>Material</th><th>Test</th><th>Minuta</th>' +
       '</tr></thead><tbody>';
 
     filas.forEach(c => {
@@ -553,6 +528,7 @@
         '<td><span class="badge">' + (c.area || '—') + '</span></td>' +
         '<td>' + c.totalAsignados + ' / ' + DATA.personas.length + '</td>' +
         '<td>' + pct + '</td>' +
+        '<td>' + linksList(c.materialLinks, 'material') + '</td>' +
         '<td>' + linksList(c.testLinks, 'test') + '</td>' +
         '<td>' + linksList(c.minutaLinks, 'minuta') + '</td>' +
         '</tr>';
@@ -562,7 +538,6 @@
     document.getElementById('tablaWrap').innerHTML = html;
   }
 
-  // ---------- Colaboradores: tabla completa ----------
   function renderPersonas() {
     const filtroTexto = document.getElementById('buscarPersona').value.toLowerCase();
     const filas = DATA.personasStatus.filter(p => !filtroTexto || p.persona.toLowerCase().includes(filtroTexto));
@@ -588,12 +563,9 @@
     document.getElementById('personasWrap').innerHTML = html;
   }
 
-  // ---------- Colaboradores: ficha individual (área + nombre) ----------
   function poblarDatalistPersonas() {
     const area = document.getElementById('areaPersonaSelect').value;
     const datalist = document.getElementById('listaPersonas');
-    // el listado de personas de la matriz no tiene área propia; se infiere
-    // del log de asistencia real (misma persona = mismo apellido)
     const porArea = {};
     DATA.log.forEach(r => { porArea[normalizar(r.apellido)] = r.area; });
     const nombres = DATA.personasStatus
@@ -628,7 +600,6 @@
     document.getElementById('pendientesPersona').textContent = p.pendientesNombres.join(', ') || 'Ninguna — 100% al día.';
   }
 
-  // ---------- Gantt: matriz capacitación x persona ----------
   function renderGantt() {
     const personas = DATA.ganttPersonas || [];
     let html = '<div class="gantt-scroll"><table class="gantt-table"><thead><tr>' +
@@ -652,7 +623,6 @@
     document.getElementById('ganttWrap').innerHTML = html;
   }
 
-  // ---------- Log detallado ----------
   function renderLog() {
     const filtroTexto = document.getElementById('buscarLog').value.toLowerCase();
     const filas = DATA.log.filter(r => {
@@ -681,7 +651,6 @@
     document.getElementById('logWrap').innerHTML = html;
   }
 
-  // ---------- Dotación ----------
   function renderDotacion() {
     let html = '<div class="table-scroll"><table><thead><tr><th>Área</th><th>Cantidad</th></tr></thead><tbody>';
     DATA.dotacionPorArea.forEach(d => {
@@ -692,7 +661,6 @@
     document.getElementById('dotacionWrap').innerHTML = html;
   }
 
-  // ---------- Listeners de filtros ----------
   document.getElementById('buscarCrono').addEventListener('input', renderCronograma);
   document.getElementById('filtroInstructor').addEventListener('change', renderCronograma);
   document.getElementById('filtroEstado').addEventListener('change', renderCronograma);
